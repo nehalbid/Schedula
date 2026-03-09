@@ -35,7 +35,6 @@ android {
 
     buildFeatures {
         compose = true
-        viewBinding = true
     }
 
     composeOptions {
@@ -47,8 +46,6 @@ dependencies {
 
     // Core
     implementation(libs.androidx.core.ktx)
-    implementation("androidx.appcompat:appcompat:1.7.1")
-    implementation("com.google.android.material:material:1.12.0")
 
     // Lifecycle
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -57,13 +54,9 @@ dependencies {
 
     // Activity & Fragment
     implementation(libs.androidx.activity.compose)
-    implementation("androidx.fragment:fragment-ktx:1.8.9")
 
     // Navigation
     implementation(libs.androidx.navigation.compose)
-
-    // UI
-    implementation("androidx.recyclerview:recyclerview:1.4.0")
 
     // Compose BOM
     implementation(platform(libs.androidx.compose.bom))
@@ -97,5 +90,8 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 
     implementation("androidx.compose.material:material-icons-extended")
+
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
 
 }

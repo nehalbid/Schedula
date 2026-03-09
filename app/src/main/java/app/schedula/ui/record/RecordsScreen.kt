@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.schedula.R
 import app.schedula.data.model.Appointment
+import app.schedula.data.model.AppointmentStatus
 
 @Composable
 fun RecordsScreen(
@@ -30,38 +31,43 @@ fun RecordsScreen(
     onViewDetails: (String) -> Unit
 ) {
 
-    val appointments by viewModel.appointments.collectAsState()
+    val appointments =
+        viewModel.appointments
+            .collectAsState(initial = emptyList())
+            .value
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF6F8FB))
-    ) {
+    if (appointments.isEmpty()) {
 
-        Text(
-            "Medical Records",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(20.dp)
-        )
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("You have no medical records.")
+        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+    } else {
 
-        if (appointments.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("You have no medical records.")
+        LazyColumn(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF6F8FB))
+        ) {
+
+            items(
+                items = appointments,
+                key = { appointment: Appointment -> appointment.id }
+            ) { appointment ->
+
+                RecordCard(
+                    appointment = appointment,
+                    onViewDetails = onViewDetails
+                )
             }
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp)
-            ) {
-                items(appointments) { appointment ->
-                    RecordCard(appointment, onViewDetails)
-                }
+
+            item {
+                Spacer(modifier = Modifier.height(80.dp))
             }
         }
     }
@@ -76,7 +82,12 @@ fun RecordCard(
     Card(
         shape = RoundedCornerShape(24.dp),
         elevation = CardDefaults.cardElevation(8.dp),
-        modifier = Modifier.clickable { onViewDetails(appointment.id) }
+        modifier = Modifier.clickable {
+            onViewDetails(appointment.id)
+        },
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        )
     ) {
 
         Column(modifier = Modifier.padding(18.dp)) {
@@ -85,7 +96,9 @@ fun RecordCard(
 
                 Image(
                     painter = painterResource(
-                        if (appointment.doctorGender.equals("male", ignoreCase = true)) R.drawable.doctor_male
+                        if (appointment.doctorGender
+                                .equals("male", ignoreCase = true)
+                        ) R.drawable.doctor_male
                         else R.drawable.doctor_female
                     ),
                     contentDescription = null,
@@ -97,13 +110,18 @@ fun RecordCard(
                 Spacer(modifier = Modifier.width(16.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
+
                     Text(
                         appointment.doctorName,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     )
-                    // Specialty is not in the Appointment model.
-                    // You would need to fetch doctor details separately to display this.
+
+                    Text(
+                        appointment.doctorSpecialty,
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
                 }
 
                 StatusBadge(appointment.status)
@@ -111,18 +129,28 @@ fun RecordCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row {
-                Icon(Icons.Default.CalendarMonth, null)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+
+                Icon(
+                    Icons.Default.CalendarMonth,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("${appointment.day} | ${appointment.time}")
+
+                Text(
+                    "${appointment.date} | ${appointment.time}",
+                    fontSize = 14.sp,
+                    color = Color.DarkGray
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
                 onClick = { onViewDetails(appointment.id) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text("View Details")
             }
@@ -134,9 +162,9 @@ fun RecordCard(
 fun StatusBadge(status: String) {
 
     val color = when (status) {
-        "UPCOMING" -> Color(0xFF1976D2)
-        "Completed" -> Color.Gray
-        "Cancelled" -> Color.Red
+        AppointmentStatus.COMPLETED.name -> Color(0xFF4CAF50)
+        AppointmentStatus.CANCELLED.name -> Color.Red
+        AppointmentStatus.NO_SHOW.name -> Color(0xFFFF9800)
         else -> Color.DarkGray
     }
 
@@ -146,6 +174,12 @@ fun StatusBadge(status: String) {
             .background(color.copy(alpha = 0.15f))
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
-        Text(status.uppercase(), color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+
+        Text(
+            text = status.replace("_", " "),
+            color = color,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }

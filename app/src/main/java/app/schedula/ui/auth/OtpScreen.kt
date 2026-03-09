@@ -53,8 +53,20 @@ fun OtpScreen(
     }
 
     LaunchedEffect(state) {
-        if (state.first == "success") {
-            onLoginSuccess()
+
+        when (state.first) {
+
+            "patient_success" -> {
+                onLoginSuccess()
+            }
+
+            "doctor_success" -> {
+                onLoginSuccess()
+            }
+
+            "admin_success" -> {
+                onLoginSuccess()
+            }
         }
     }
 

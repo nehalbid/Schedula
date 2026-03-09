@@ -25,6 +25,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -73,6 +74,7 @@ fun HomeScreen(
     )
 
     val doctors by homeViewModel.doctors.collectAsState()
+    val isLoading by homeViewModel.isLoading.collectAsState()
 
     val filteredDoctors = doctors.filter {
         (selectedCategory == "All" || it.specialty == selectedCategory) &&
@@ -122,12 +124,18 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            items(filteredDoctors) { doctor ->
-                DoctorCard(
-                    doctor = doctor,
-                    onClick = { onDoctorClick(doctor.id) }
-                )
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                items(filteredDoctors) { doctor ->
+                    DoctorCard(
+                        doctor = doctor,
+                        onClick = { onDoctorClick(doctor.id) }
+                    )
+                }
             }
         }
     }

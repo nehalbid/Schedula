@@ -3,6 +3,7 @@ package app.schedula.ui.doctor
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +26,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -84,40 +86,45 @@ fun DoctorDetailsScreen(
             )
         }
     ) { padding ->
-        doctor?.let {
-            Column(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-                    .background(Color(0xFFF5F7FA))
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
-            ) {
-                DoctorHeader(it)
-                Spacer(modifier = Modifier.height(24.dp))
-                StatsRow(it)
-                Spacer(modifier = Modifier.height(24.dp))
-                ServicesSection()
-                Spacer(modifier = Modifier.height(24.dp))
-                AvailabilitySection()
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(
-                    onClick = {
-                        viewModel.bookSlot(doctorId, Date())
-                        onBookAppointmentClick(doctorId)
-                    },
+        if (doctor == null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            doctor?.let {
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(55.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFBBDEFB),
-                        contentColor = Color.Black
-                    )
+                        .padding(padding)
+                        .fillMaxSize()
+                        .background(Color(0xFFF5F7FA))
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp)
                 ) {
-                    Text("Book Appointment", fontWeight = FontWeight.Bold)
+                    DoctorHeader(it)
+                    Spacer(modifier = Modifier.height(24.dp))
+                    StatsRow(it)
+                    Spacer(modifier = Modifier.height(24.dp))
+                    ServicesSection()
+                    Spacer(modifier = Modifier.height(24.dp))
+                    AvailabilitySection()
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = {
+                            onBookAppointmentClick(doctorId)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(55.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFBBDEFB),
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        Text("Book Appointment", fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -257,8 +264,8 @@ fun AvailabilitySection() {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            AvailabilityItem("MON - FRI", "10:00 AM - 01:00 PM", modifier = Modifier.weight(1f))
-            AvailabilityItem("SAT", "02:00 PM - 07:00 PM", modifier = Modifier.weight(1f))
+            AvailabilityItem("MON - FRI", "10:00 AM - 07:00 PM", modifier = Modifier.weight(1f))
+            AvailabilityItem("SAT", "10:00 AM - 01:00 PM", modifier = Modifier.weight(1f))
         }
     }
 }

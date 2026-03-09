@@ -9,43 +9,72 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.nestedscroll.*
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.compose.*
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
-import app.schedula.ui.appointment.*
-import app.schedula.ui.booking.*
+import app.schedula.ui.appointment.AppointmentDetailScreen
+import app.schedula.ui.appointment.AppointmentScreen
+import app.schedula.ui.appointment.CancelAppointmentScreen
+import app.schedula.ui.booking.BookingScreen
+import app.schedula.ui.booking.SlotUnavailableScreen
 import app.schedula.ui.confirmation.ConfirmationScreen
 import app.schedula.ui.doctor.DoctorDetailsScreen
 import app.schedula.ui.home.HomeScreen
+import app.schedula.ui.profile.FamilyMembersScreen
+import app.schedula.ui.profile.PersonalInfoScreen
 import app.schedula.ui.profile.ProfileScreen
 import app.schedula.ui.record.RecordsScreen
 import app.schedula.ui.support.SupportCenterScreen
 
 @Composable
-fun MainBottomNav(onLogout: () -> Unit) {
+fun MainBottomNav(
+    onLogout: () -> Unit, 
+    navController: NavHostController,
+    rootNavController: NavHostController,
+    initialTab: String = Routes.DOCTORS
+) {
 
-    val navController = rememberNavController()
     val haptics = LocalHapticFeedback.current
     val context = LocalContext.current
 
@@ -55,9 +84,6 @@ fun MainBottomNav(onLogout: () -> Unit) {
         BottomNavItem(Routes.APPOINTMENTS, "Appointments", Icons.Default.CalendarMonth),
         BottomNavItem(Routes.PROFILE, "Profile", Icons.Default.Person)
     )
-
-    val currentRoute =
-        navController.currentBackStackEntryAsState().value?.destination?.route
 
     var bottomBarVisible by remember { mutableStateOf(true) }
 
@@ -92,7 +118,7 @@ fun MainBottomNav(onLogout: () -> Unit) {
 
         NavHost(
             navController = navController,
-            startDestination = Routes.DOCTORS,
+            startDestination = initialTab,
             modifier = Modifier.fillMaxSize()
         ) {
 
@@ -122,21 +148,47 @@ fun MainBottomNav(onLogout: () -> Unit) {
                 ProfileScreen(
                     onLogout = onLogout,
                     onSupportClick = {
-                        navController.navigate("support")
+                        navController.navigate(Routes.SUPPORT)
                     },
                     onRateClick = {
                         val packageName = context.packageName
                         try {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")))
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName"))
+                            )
                         } catch (e: android.content.ActivityNotFoundException) {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")))
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName"))
+                            )
                         }
+                    },
+                    onPersonalInfoClick = {
+                        navController.navigate(Routes.PERSONAL_INFO)
+                    },
+                    onFamilyMembersClick = {
+                        navController.navigate(Routes.FAMILY_MEMBERS)
                     }
                 )
             }
 
-            composable("support") {
+            composable(Routes.SUPPORT) {
                 SupportCenterScreen(onBackClick = { navController.popBackStack() })
+            }
+
+            composable(Routes.PERSONAL_INFO) {
+                PersonalInfoScreen(
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            composable(Routes.FAMILY_MEMBERS) {
+                FamilyMembersScreen(
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable(
@@ -162,18 +214,23 @@ fun MainBottomNav(onLogout: () -> Unit) {
                 })
             ) {
                 val doctorId = it.arguments?.getString("doctorId") ?: ""
+                val viewModelStoreOwner = remember(it) {
+                    rootNavController.getBackStackEntry("${Routes.MAIN}?initialTab={initialTab}")
+                }
                 BookingScreen(
                     doctorId = doctorId,
                     onBackClick = { navController.popBackStack() },
                     onBookingSuccess = { appointmentId ->
-                        navController.navigate("${Routes.CONFIRMATION}/$appointmentId") {
+                        navController.navigate("${Routes.CONFIRMATION}/$appointmentId?isReschedule=false") {
                             popUpTo("${Routes.BOOKING}/$doctorId") { inclusive = true }
                         }
                     },
                     onSlotUnavailable = {
                         navController.navigate(Routes.SLOT_UNAVAILABLE)
                     },
-                    onAuthError = {}
+                    onAuthError = {},
+                    onPatientDetailsClick = { rootNavController.navigate(Routes.PATIENT_DETAILS) },
+                    bookingViewModel = viewModel(viewModelStoreOwner)
                 )
             }
 
@@ -186,14 +243,17 @@ fun MainBottomNav(onLogout: () -> Unit) {
             }
 
             composable(
-                "${Routes.CONFIRMATION}/{appointmentId}",
-                arguments = listOf(navArgument("appointmentId") {
-                    type = NavType.StringType
-                })
+                "${Routes.CONFIRMATION}/{appointmentId}?isReschedule={isReschedule}",
+                arguments = listOf(
+                    navArgument("appointmentId") { type = NavType.StringType },
+                    navArgument("isReschedule") { type = NavType.BoolType; defaultValue = false }
+                )
             ) {
                 val appointmentId = it.arguments?.getString("appointmentId") ?: ""
-                ConfirmationScreen(
+                val isReschedule = it.arguments?.getBoolean("isReschedule") ?: false
+                 ConfirmationScreen(
                     appointmentId = appointmentId,
+                    isReschedule = isReschedule,
                     onBackClick = { navController.popBackStack() },
                     onViewAppointmentClick = {
                         navController.navigate(Routes.APPOINTMENTS) {
@@ -215,6 +275,11 @@ fun MainBottomNav(onLogout: () -> Unit) {
                     onBack = { navController.popBackStack() },
                     onCancelClick = {
                         navController.navigate("${Routes.CANCEL_APPOINTMENT}/$appointmentId")
+                    },
+                    onRescheduleSuccess = { newId ->
+                        navController.navigate("${Routes.CONFIRMATION}/$newId?isReschedule=true") {
+                            popUpTo("${Routes.APPOINTMENT_DETAILS}/$appointmentId") { inclusive = true }
+                        }
                     }
                 )
             }

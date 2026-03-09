@@ -38,8 +38,24 @@ fun LoginScreen(
     val activity = context.findActivity()
 
     LaunchedEffect(state) {
-        if (state.first == "code_sent") {
-            onCodeSent()
+
+        when (state.first) {
+
+            "code_sent" -> {
+                onCodeSent()
+            }
+
+            "patient_success" -> {
+                // navigate to patient home
+            }
+
+            "doctor_success" -> {
+                // navigate to doctor panel
+            }
+
+            "admin_success" -> {
+                // navigate to admin dashboard
+            }
         }
     }
 

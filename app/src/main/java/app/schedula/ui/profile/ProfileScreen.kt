@@ -16,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -28,21 +27,16 @@ fun ProfileScreen(
     onLogout: () -> Unit,
     onSupportClick: () -> Unit,
     onRateClick: () -> Unit,
+    onPersonalInfoClick: () -> Unit,
+    onFamilyMembersClick: () -> Unit,
     profileViewModel: ProfileViewModel = viewModel()
 ) {
 
     val authViewModel: AuthViewModel = viewModel()
     val user by profileViewModel.user.collectAsState()
 
-    var showEditDialog by remember { mutableStateOf(false) }
     var showRateDialog by remember { mutableStateOf(false) }
-
-    // Automatically show the edit dialog if the user's name is blank.
-    LaunchedEffect(user) {
-        if (user != null && user?.name?.isBlank() == true) {
-            showEditDialog = true
-        }
-    }
+    var showAvatarDialog by remember { mutableStateOf(false) }
 
     Scaffold(containerColor = Color(0xFFF6F8FB)) { paddingValues ->
 
@@ -54,7 +48,8 @@ fun ProfileScreen(
                 .padding(20.dp)
         ) {
 
-            // Profile Header Card
+            // ---------------- PROFILE HEADER ----------------
+
             Card(
                 shape = RoundedCornerShape(24.dp),
                 elevation = CardDefaults.cardElevation(6.dp),
@@ -68,73 +63,75 @@ fun ProfileScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
 
-                    Box {
-                        Box(
-                            modifier = Modifier
-                                .size(100.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary)
-                        )
+                    // Avatar
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                            .clickable { showAvatarDialog = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+
+                        val avatarIcon = when (user?.avatarIcon) {
+                            "face1" -> Icons.Default.Face
+                            "face2" -> Icons.Default.Person
+                            "face3" -> Icons.Default.AccountCircle
+                            "face4" -> Icons.Default.SentimentSatisfied
+                            else -> Icons.Default.Person
+                        }
 
                         Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit Profile",
-                            tint = Color.Black,
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(Color.White)
-                                .padding(6.dp)
-                                .clickable { showEditDialog = true }
+                            imageVector = avatarIcon,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(50.dp)
                         )
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = user?.name?.takeIf { it.isNotBlank() } ?: user?.phone ?: "",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        text = user?.name?.ifBlank { "No Name" } ?: "No Name",
+                        fontSize = 20.sp
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
                         text = user?.phone ?: "",
-                        color = Color.DarkGray,
-                        fontSize = 14.sp
+                        fontSize = 14.sp,
+                        color = Color.Gray
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(28.dp))
 
+            // ---------------- PROFILE MANAGEMENT ----------------
+
             Text(
-                text = "Account Information",
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
-                color = Color.Black
+                text = "Profile Management",
+                fontSize = 16.sp
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            ProfileInfoItem(
-                Icons.Default.Person, 
-                "Full Name", 
-                user?.name?.takeIf { it.isNotBlank() } ?: user?.phone ?: ""
-            )
-            ProfileInfoItem(Icons.Default.Email, "Email", user?.email ?: "")
-            ProfileInfoItem(Icons.Default.LocationOn, "Location", user?.location ?: "")
+            ProfileMenuItem(Icons.Default.Badge, "Personal Details") {
+                onPersonalInfoClick()
+            }
+
+            ProfileMenuItem(Icons.Default.Group, "Family Members") {
+                onFamilyMembersClick()
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // ---------------- SETTINGS ----------------
+
             Text(
                 text = "Settings",
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
-                color = Color.Black
+                fontSize = 16.sp
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -171,19 +168,21 @@ fun ProfileScreen(
         }
     }
 
-    // Edit Profile Dialog
-    if (showEditDialog) {
-        EditProfileDialog(
-            currentName = user?.name ?: "",
-            currentEmail = user?.email ?: "",
-            currentLocation = user?.location ?: "",
-            onDismiss = { showEditDialog = false },
-            onSave = { newName, newEmail, newLocation ->
-                profileViewModel.updateProfile(newName, newEmail, newLocation)
-                showEditDialog = false
+    // ---------------- AVATAR DIALOG ----------------
+
+    if (showAvatarDialog) {
+        AvatarSelectionDialog(
+            onDismiss = { showAvatarDialog = false },
+            onSelect = { selectedIcon ->
+
+                profileViewModel.updateAvatar(selectedIcon)
+
+                showAvatarDialog = false
             }
         )
     }
+
+    // ---------------- RATE DIALOG ----------------
 
     if (showRateDialog) {
         RateAppDialog(
@@ -197,32 +196,42 @@ fun ProfileScreen(
 }
 
 @Composable
-fun ProfileInfoItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    value: String
+fun AvatarSelectionDialog(
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(3.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(icon, contentDescription = null, tint = Color.Black)
-            Spacer(modifier = Modifier.width(16.dp))
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        title = { Text("Select Avatar") },
+        text = {
             Column {
-                Text(title, fontSize = 12.sp, color = Color.Gray)
-                Text(value, fontWeight = FontWeight.Medium, color = Color.Black)
+
+                AvatarOption("face1", Icons.Default.Face, onSelect)
+                AvatarOption("face2", Icons.Default.Person, onSelect)
+                AvatarOption("face3", Icons.Default.AccountCircle, onSelect)
+                AvatarOption("face4", Icons.Default.SentimentSatisfied, onSelect)
             }
         }
+    )
+}
+
+@Composable
+fun AvatarOption(
+    key: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onSelect: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSelect(key) }
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null)
+        Spacer(modifier = Modifier.width(16.dp))
+        Text("Select")
     }
 }
 
@@ -247,47 +256,9 @@ fun ProfileMenuItem(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = Color.Black)
+            Icon(icon, contentDescription = null)
             Spacer(modifier = Modifier.width(16.dp))
-            Text(title, fontWeight = FontWeight.Medium, color = Color.Black)
+            Text(title)
         }
     }
-}
-
-@Composable
-fun EditProfileDialog(
-    currentName: String,
-    currentEmail: String,
-    currentLocation: String,
-    onDismiss: () -> Unit,
-    onSave: (String, String, String) -> Unit
-) {
-
-    var name by remember { mutableStateOf(currentName) }
-    var email by remember { mutableStateOf(currentEmail) }
-    var location by remember { mutableStateOf(currentLocation) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            Button(onClick = { onSave(name, email, location) }) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
-        title = { Text("Edit Profile") },
-        text = {
-            Column {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full Name") })
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(value = location, onValueChange = { location = it }, label = { Text("Location") })
-            }
-        }
-    )
 }

@@ -1,8 +1,9 @@
-package app.schedula.utils
+
 
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.CollectionReference
+import java.util.Locale
 
 object FirebaseSeeder {
 
@@ -88,7 +89,7 @@ object FirebaseSeeder {
                 "gender" to "female",
                 "fee" to 1300
             ),
-             mapOf(
+            mapOf(
                 "id" to "doc9",
                 "name" to "Dr. Sameer Desai",
                 "specialty" to "Neurologist",
@@ -217,63 +218,64 @@ object FirebaseSeeder {
 
                     val slotsRef = doctorRef.collection("slots")
 
-                    // Weekdays: Morning + Evening
+                    // Weekdays: Morning (10 AM - 1 PM) + Evening (4 PM - 7 PM)
                     weekdays.forEach { day ->
-                        generateSlots(slotsRef, day, 10, 14) // 10:00 AM - 1:00 PM
-                        generateSlots(slotsRef, day, 16, 20) // 4:00 PM - 7:00 PM
+                        generateSlots(slotsRef, day, 10, 13) // Ends exactly at 1:00 PM
+                        generateSlots(slotsRef, day, 16, 19) // Ends exactly at 7:00 PM
                     }
 
-                    // Weekends: Morning only
+                    // Weekends: Morning only (10 AM - 1 PM)
                     weekends.forEach { day ->
-                        generateSlots(slotsRef, day, 10, 14) // 10:00 AM - 1:00 PM
+                        generateSlots(slotsRef, day, 10, 13)
                     }
                 }
         }
     }
 
-    // --------------------------------------------------
-    // 🔹 SLOT GENERATOR (30 MIN INTERVAL)
-    // --------------------------------------------------
+    /**
+     * Generates slots with a 30-min interval.
+     * Stops precisely at endHour:00.
+     */
     private fun generateSlots(
         slotsRef: CollectionReference,
         day: String,
         startHour: Int,
         endHour: Int
     ) {
-
         var hour = startHour
         var minute = 0
 
-        while (hour < endHour) {
-
-            if (!((hour == 13 ) || (hour == 19 ))) {
-                val displayHour =
-                    if (hour > 12) hour - 12
-                    else if (hour == 0) 12
-                    else hour
-
-                val period = if (hour >= 12) "PM" else "AM"
-
-                val time = String.format("%02d:%02d %s", displayHour, minute, period)
-
-                val slotId = "${day}_${hour}_${minute}"
-
-                slotsRef.document(slotId).set(
-                    mapOf(
-                        "day" to day,
-                        "time" to time,
-                        "isBooked" to false,
-                        "bookedBy" to null
-                    )
-                )
+        while (true) {
+            val displayHour = when {
+                hour > 12 -> hour - 12
+                hour == 0 -> 12
+                else -> hour
             }
 
-            minute += 30
+            val period = if (hour >= 12) "PM" else "AM"
+            val time = String.format(Locale.ENGLISH, "%02d:%02d %s", displayHour, minute, period)
+            val slotId = "${day}_${hour}_${minute}"
 
+            slotsRef.document(slotId).set(
+                mapOf(
+                    "day" to day,
+                    "time" to time,
+                    "isBooked" to false,
+                    "bookedBy" to null
+                )
+            )
+
+            // Check if we just created the endHour:00 slot. If so, break.
+            if (hour == endHour && minute == 0) break
+
+            minute += 30
             if (minute == 60) {
                 minute = 0
                 hour++
             }
+
+            // Safety break to prevent infinite loops if endHour is somehow less than startHour
+            if (hour > endHour) break
         }
     }
 }
